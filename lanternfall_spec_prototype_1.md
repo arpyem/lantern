@@ -55,7 +55,7 @@ You are building exactly five systems, each in its own script, wired together by
 Do not revisit these. They are resolved:
 
 - **The lantern never permanently clears fog.** Only placed installations do. The lantern is always temporary visibility.
-- **Fog rendering is a hybrid.** `CanvasModulate` + `PointLight2D` handles real-time darkness and the lantern cone (Godot does this natively, for free). A separate 512×512 `Image` mask handles *permanent* clearance state. The mask is only redrawn during active clearance animations and idle breathing — not every frame.
+- **Fog rendering is a hybrid.** `CanvasModulate` + `PointLight2D` handles real-time darkness and the lantern's temporary radial light pool (Godot does this natively, for free). A separate 512×512 `Image` mask handles *permanent* clearance state. The mask is only redrawn during active clearance animations and idle breathing — not every frame.
 - **The fog boundary behaves like a waterline**, not a geometric edge. It has noise-offset irregularity, an animated fringe (cool blue-white, like foam), a damp-sand residual on the cleared side, and slow idle breathing. See §3.2a for the full model.
 - **Poes spawn only in active fog.** Cleared areas are calm and earned.
 - **Placement requires cleared fog** under the player. No stationary requirement.
@@ -122,7 +122,7 @@ $PoeSprite.texture = load(AssetConfig.path("poes/common.png"))
 ```
 
 The prototype is done when a player can:
-1. Move through a dark world with a warm amber lantern cone illuminating the immediate area
+1. Move through a dark world with a warm amber lantern glow illuminating the immediate area
 2. See Poes drifting in the fog ahead, attracted by the light
 3. Press F to place a lantern post in a cleared area
 4. Watch the fog recede from the installation with a waterline animation — the boundary breathing, the fringe rolling back, the cleared area settling with a damp-sand edge
@@ -319,7 +319,7 @@ Player (CharacterBody2D)
 - Tracked as a `Vector2`, updated on non-zero movement input
 - Default facing: `Vector2.DOWN`
 - LanternVisual position and rotation derived from facing each frame
-- Facing is exported via a getter for FogSystem to use when shaping the clearance cone
+- Facing is still exposed for sprite presentation and placement offset, but FogSystem does not shape the lantern as a cone in the prototype
 
 ### 2.9 Constraints & Boundaries
 
@@ -458,7 +458,7 @@ FogRenderer                           ← fog_renderer.gd — swappable implemen
 | `image_size` | Vector2i | Vector2i(512, 512) | Fog mask resolution |
 | `fog_modulate_color` | Color | Color(0.05, 0.06, 0.12, 1.0) | CanvasModulate colour — base darkness |
 | `lantern_clear_radius` | float | 140.0 | Radius of temporary lantern visibility in world px |
-| `lantern_clear_softness` | float | 40.0 | Feather width at lantern cone edge |
+| `lantern_clear_softness` | float | 40.0 | Feather width at the temporary lantern light edge |
 | `install_clear_radius` | float | 200.0 | Target radius of permanent clearance in world px |
 | `install_clear_softness` | float | 60.0 | Feather on settled permanent clearance edge |
 | `clearance_duration` | float | 1.2 | Seconds for tide-out animation |

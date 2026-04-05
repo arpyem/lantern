@@ -87,7 +87,7 @@ The target player is a **horizon chaser** — motivated by perpetual progression
 
 ### 2.1 The Core Loop
 
-1. **Venture out** with your handheld lantern — light temporarily reveals a cone of the fogged world ahead
+1. **Venture out** with your handheld lantern — light temporarily reveals a warm radial pocket around you
 2. **Gather** resources exposed by the light — organic materials, minerals, fog-crystals, buried objects
 3. **Encounter** Poes drawn to your lantern — collect them as you explore
 4. **Install** a permanent light source — lantern post, luminous plant, carved beacon — holding the fog back for good
@@ -113,7 +113,7 @@ For the **first playable prototype**, controls are deliberately narrow:
 
 - Movement: keyboard movement (`WASD` / arrow keys)
 - Placement: single key (`F`) to place the current installation type
-- Lantern aiming: tied to facing / movement direction for the prototype
+- Lantern presentation: sprite orientation is tied to facing / movement direction for the prototype, but illumination is radial
 
 Mouse aiming, controller support, gathering interactions, and crafting input should be deferred until the core exploration loop feels good. The prototype's job is to validate movement, temporary visibility, permanent fog clearance, and Poe attraction with the least possible input complexity.
 
@@ -145,11 +145,11 @@ Visually the settlement should echo Tarrey Town's incremental warmth — each ad
 
 ### 4.1 The Handheld Lantern
 
-The lantern is the player's primary tool and the game's most important object. It projects a cone of light that temporarily reveals the fogged world ahead — terrain, resources, hidden objects, Poes, points of interest. Without it, the world is dark. With it, the world slowly becomes known.
+The lantern is the player's primary tool and the game's most important object. It projects a warm radial pool of light that temporarily reveals the fogged world around the player — terrain, resources, hidden objects, Poes, points of interest. Without it, the world is dark. With it, the world slowly becomes known.
 
 Aesthetically the lantern is a Zonai device — amber glass set in root-like metalwork that looks grown rather than forged, warm and slightly alive. Early lanterns are small and intimate; later upgrades feel more powerful but maintain the same organic character, as if the lantern has been trained rather than engineered. The light it casts is warm amber — distinct from the cooler blue-white of the fog, and from the steadier golden glow of permanent installations.
 
-The lantern is the central upgrade path. Early versions cast a small warm cone. Later versions can be wider, brighter, longer-range, or tuned to specific frequencies that reveal things invisible to a standard lantern — unlocking new layers of what was always there.
+The lantern is the central upgrade path. Early versions cast a small warm pool of light. Later versions can be broader, brighter, longer-range, or tuned to specific frequencies that reveal things invisible to a standard lantern — unlocking new layers of what was always there.
 
 ### 4.2 Fog Behaviour
 
@@ -205,7 +205,7 @@ No track is a prerequisite for another in a strict sense — the player can lean
 
 ### 5.2 Lantern Upgrade Path
 
-> **[PLACEHOLDER]** Define the full lantern upgrade tree — cone width, brightness, range, frequency tuning. What materials and Poes does each upgrade require? How many tiers before end-game?
+> **[PLACEHOLDER]** Define the full lantern upgrade tree — radius, brightness, range feel, frequency tuning. What materials and Poes does each upgrade require? How many tiers before end-game?
 
 ### 5.3 Milestone & Horizon Design
 
@@ -397,7 +397,7 @@ The visual identity of Lanternfall is defined by the tension and harmony between
 
 ### 12.3 Lantern Light Rendering (2D)
 
-In top-down 2D, the lantern cone becomes a literal visible shape on the ground — a warm radial gradient overlaid on the fog layer, with a direction controlled by the player. This is both technically simpler than 3D volumetric lighting and potentially more elegant: the cone is readable, the boundary between light and dark is legible, and the player can see exactly where they have and haven't explored.
+In top-down 2D, the lantern is rendered as a warm radial gradient overlaid on the fog-darkened world. For the prototype, this light is intentionally omni-directional rather than cone-shaped: the sprite and carried lantern still face movement direction, but the illumination itself is a circular pool. This keeps the implementation simple while still validating movement, temporary visibility, and contrast between handheld and permanent light.
 
 **Implemented in Godot 4 as a hybrid system:**
 - `CanvasModulate` darkens all world content to deep blue-black. The player's `PointLight2D` (and Poe glow lights, installation lights) punch through this darkness natively — no per-frame image writing required for the live lantern.
@@ -405,8 +405,8 @@ In top-down 2D, the lantern cone becomes a literal visible shape on the ground �
 - The fog boundary behaves as a waterline — see §4.2 for the full model. It is not a flat overlay but a living, organic shoreline with noise-offset irregularity, animated recession on clearance, and slow idle breathing.
 
 Key feel targets:
-- The lantern cone edge should be soft, not hard — a gradient falloff, not a sharp circle
-- The transition from lit to dark at the cone edge should feel like moving from a warm room into a cool night
+- The lantern light edge should be soft, not hard — a gradient falloff, not a sharp circle
+- The transition from lit to dark at the lantern edge should feel like moving from a warm room into a cool night
 - Permanent light installations should cast a distinctly different quality of light — broader, softer, steadier — so explored and unexplored areas read clearly at a glance
 - The HUD is on a separate CanvasLayer unaffected by the world darkening
 
@@ -578,6 +578,23 @@ The first playable prototype targets **desktop PC first** with keyboard input. W
 ### 15.5 Soft Multiplayer Architecture
 
 Soft multiplayer remains a longer-horizon feature and is **out of scope for the first playable prototype**. The immediate technical risk to validate is the fog system and the single-player exploration loop. Any multiplayer-facing state should be designed later around proven single-player progression data, not pre-optimized into the first slice.
+
+---
+
+## 15.6 Prototype Learnings
+
+The first playable prototype produced several concrete technical and design learnings that should inform future iterations:
+
+- **Permanent fog state should remain mask-driven.** Using a separate permanent mask for gameplay truth (`get_fog_alpha_at()`, placement validation, Poe spawning, save/load) keeps the core loop stable even when the visual presentation changes.
+- **Full-image CPU fog compositing in GDScript is too expensive for expressive per-frame effects.** Rebuilding and scanning the full fog image every frame or on a recurring idle timer caused major slowdown. Event-local updates and infrequent base-mask rebuilds are the viable CPU baseline.
+- **Expressive fog works better as a hybrid of mask truth plus GPU-driven overlays.** Stronger readability, animated shoreline effects, and ambient fog motion can be added through a shader-backed overlay layer without reintroducing heavy CPU compositing.
+- **Fog rendering iteration must stabilise the rendering path before tuning the look.** Several failed fog passes were not aesthetic failures but pipeline failures: overly opaque base fog, wrong mask sampling scale, invisible overlay nodes, and shader compile breakage all masked visual changes. The reliable workflow is: keep `FogRect` as the stable fog body, keep `BoundaryOverlay` narrow and observable, validate that the shader is compiling and compositing correctly, and only then tune shoreline style, contrast, and motion.
+- **Idle fog dynamics should be decorative, not systemic.** Ambient shimmer, shoreline pulse, and waterline motion should never modify the permanent mask or affect placement/spawn logic. Visual dynamism and gameplay truth need to stay decoupled.
+- **Readability requires stronger distinction between explored and unexplored space than the earliest prototype delivered.** Cleared territory needs an unmistakable settled look, while dense fog needs a more legible body and boundary so the player can read progress at a glance.
+- **The waterline metaphor remains useful, but implementation must stay scoped.** Receding fringe, settled edge tint, and soft boundary irregularity are high-value; full per-pixel breathing and expensive boundary scans are not justified in the first playable.
+- **Generated placeholder assets are a valid long-term prototyping workflow.** They reduced friction when building and testing scene structure, lighting, placement, and fog behavior before final art existed.
+
+These learnings should be treated as current prototype-era guidance, not final production constraints. Future rendering or art passes may change implementation details, but they should preserve the separation between gameplay fog state and visual fog presentation.
 
 ---
 
