@@ -89,10 +89,10 @@ The target player is a **horizon chaser** — motivated by perpetual progression
 
 1. **Venture out** with your handheld lantern — light temporarily reveals a warm radial pocket around you
 2. **Gather** resources exposed by the light — organic materials, minerals, fog-crystals, buried objects
-3. **Encounter** Poes drawn to your lantern — collect them as you explore
-4. **Install** a permanent light source — lantern post, luminous plant, carved beacon — holding the fog back for good
-5. **Return** to your settlement — craft, upgrade tools, trade with vendors using gathered materials and Poes
-6. **Unlock** a new tool, biome access, or installation type — the horizon shifts outward
+3. **Encounter** Poes drawn to your lantern — recruit a small trailing group as companions
+4. **Guide** those Poes toward nearby dormant objects and spend them to activate world interactions
+5. **Return** to your settlement — craft, upgrade tools, trade, and convert exploration progress into broader world growth
+6. **Unlock** a new tool, biome access, or interaction type — the horizon shifts outward
 7. **Revisit** an old area with new knowledge or a new tool — find something that was always there, now reachable
 
 ### 2.2 Session Feel
@@ -112,10 +112,10 @@ Long-term success is self-defined: a fully lit region, a thriving settlement, a 
 For the **first playable prototype**, controls are deliberately narrow:
 
 - Movement: keyboard movement (`WASD` / arrow keys)
-- Placement: single key (`F`) to place the current installation type
+- Interaction: single key (`F`) to activate the current nearby Poe-powered object
 - Lantern presentation: sprite orientation is tied to facing / movement direction for the prototype, but illumination is radial
 
-Mouse aiming, controller support, gathering interactions, and crafting input should be deferred until the core exploration loop feels good. The prototype's job is to validate movement, temporary visibility, permanent fog clearance, and Poe attraction with the least possible input complexity.
+Mouse aiming, controller support, broader gathering interactions, and crafting input should be deferred until the core exploration loop feels good. The prototype's job is to validate movement, temporary visibility, dense fog feel, Poe attraction/following, and simple world interaction with the least possible input complexity.
 
 ---
 
@@ -158,6 +158,8 @@ The fog is not flat or uniform — it has texture, varying density across region
 The boundary is never a perfect geometric circle. It has noise-offset irregularity (organic shoreline character), a soft luminous fringe at the receding edge during clearance (foam at the wave's edge), a residual damp-sand darkening on the newly cleared side, and a slow idle oscillation when nothing is clearing — the tide that never fully stills.
 
 Fog clearance is permanent. Once an area is lit by a permanent installation, it stays lit and the shoreline settles into its new position. The player's progress is always visible in the landscape — not as a hard-edged circle but as a coastline they have personally shaped.
+
+For the **current visual prototype pass**, fog is being explored as a dense field of layered drifting mist clusters rather than a gameplay-truth boundary system. In this version the fog is intended to heavily obscure the ground plane, part around the player with a visible fade animation when approached, remain absent briefly, and then respawn as new mist after a configurable delay. This prototype is a feel-study for density, motion, legibility, and local dispersal — not yet the final gameplay fog architecture.
 
 > **[PLACEHOLDER]** Define fog density tiers — does thicker fog require a more powerful lantern to penetrate, acting as a natural progression gate into later biomes?
 
@@ -274,18 +276,20 @@ Poes are small ghostly beings — curious, gentle, drawn to light. They exist in
 
 Visually they should feel distinct from Zelda's Poes — more like soft floating wisps with personality, somewhere between a firefly and a small ghost. They are the soul of the world's ambient life.
 
-### 8.2 Poes as Currency
+### 8.2 Poes as Followers and Spendable Companions
 
-Poes function as a social and economic currency rather than a crafting material. They are used to:
+The current prototype is testing Poes as a **small follower resource** rather than a passive accumulation score. In this model:
 
-- Attract and unlock vendors (a vendor requires X Poes to settle)
-- Unlock certain beacon structures that require community as much as materials
-- Trade for rare recipes or lore items with specific vendors
-- Contribute to the settlement's light output
+- Poes are attracted to the player's lantern and can be recruited as visible trailing companions
+- The player can hold a small capped group at once (currently three)
+- Nearby dormant objects can request one or more follower Poes for activation
+- Pressing `F` while in range spends a follower Poe, sending it visibly into the object to power the interaction
 
-Poes are not spent in a depleting sense — they accumulate as a reputation. A vendor doesn't take your Poes; they come because enough Poes have gathered around you.
+This changes the emotional read of the system: Poes are not abstract currency, they are companions the player shepherds through the fog and chooses where to send.
 
-> **[PLACEHOLDER]** Finalise the Poe economy model — is it a pure accumulation score, or are Poes a spendable resource in some contexts? Define Poe types and whether different types have different uses or attractions.
+Longer-term economy questions remain open. Settlement attraction, vendor requirements, and broader progression may still use aggregate Poe affinity or reputation later, but the immediate prototype direction is to validate **Poes as followers first**.
+
+> **[PLACEHOLDER]** Finalise the long-term Poe economy model — do follower Poes, reputation Poes, and rare Poe types coexist, or does one unified model scale into the full game?
 
 ### 8.3 Poe Types
 
@@ -399,16 +403,17 @@ The visual identity of Lanternfall is defined by the tension and harmony between
 
 In top-down 2D, the lantern is rendered as a warm radial gradient overlaid on the fog-darkened world. For the prototype, this light is intentionally omni-directional rather than cone-shaped: the sprite and carried lantern still face movement direction, but the illumination itself is a circular pool. This keeps the implementation simple while still validating movement, temporary visibility, and contrast between handheld and permanent light.
 
-**Implemented in Godot 4 as a hybrid system:**
-- `CanvasModulate` darkens all world content to deep blue-black. The player's `PointLight2D` (and Poe glow lights, installation lights) punch through this darkness natively — no per-frame image writing required for the live lantern.
-- A separate 512×512 Image mask on a `CanvasLayer` handles *permanent* fog clearance state. This mask is only updated during active clearance animations and idle boundary breathing — not every frame.
-- The fog boundary behaves as a waterline — see §4.2 for the full model. It is not a flat overlay but a living, organic shoreline with noise-offset irregularity, animated recession on clearance, and slow idle breathing.
+**Current prototype implementation in Godot 4:**
+- `CanvasModulate` darkens all world content to deep blue-black. The player's `PointLight2D` punches through this darkness natively and provides the warm local reveal.
+- A dense field of layered `Sprite2D` fog clusters sits above the ground and below the player. Each cluster uses several soft high-resolution fog sheets with subtle animation, drift, and overlap to produce a blended ground-mist body.
+- Fog clusters react to player proximity by playing a fade-away animation, shifting laterally away from the player for a stylized parting feel, then despawning and later respawning as fresh mist after a configurable delay.
+- This is currently a **visual fog field**, not the final gameplay fog-truth implementation. It is being used to validate density, obscuration, fade timing, and the feel of traversing fog.
 
 Key feel targets:
 - The lantern light edge should be soft, not hard — a gradient falloff, not a sharp circle
 - The transition from lit to dark at the lantern edge should feel like moving from a warm room into a cool night
-- Permanent light installations should cast a distinctly different quality of light — broader, softer, steadier — so explored and unexplored areas read clearly at a glance
-- The HUD is on a separate CanvasLayer unaffected by the world darkening
+- Dense fog should meaningfully obscure terrain until the player enters it
+- Fog dispersal should read clearly as parting mist rather than sprites simply vanishing
 
 ### 12.4 Settlement Visual Identity
 
@@ -420,7 +425,9 @@ Structures use the organic-technology vocabulary: timber with glowing inlaid vei
 
 Poes are soft floating wisps — distinct from the Zelda design, which is more skull-like and angular. Lanternfall Poes are rounder, more diffuse at the edges, with a slow internal light that pulses gently. They should read as curious and gentle rather than spectral. Different Poe types are distinguished by colour temperature, size, and movement pattern — not by facial features or complex silhouettes.
 
-> **[PLACEHOLDER]** Develop a full Poe visual design guide — silhouette language, colour coding by type, animation principles (how do they move? do they react to the player's presence?)
+For the current prototype, follower movement should borrow from Zelda fairies more than currency pickups: soft orbiting, gentle hover drift, and readable position around the player without turning into rigid formation slots.
+
+> **[PLACEHOLDER]** Develop a full Poe visual design guide — silhouette language, colour coding by type, animation principles, follower spacing, and how recruited Poes differ from ambient Poes.
 
 ---
 
@@ -540,9 +547,9 @@ Not everything needs animation. Prioritise in this order:
 
 The full UI philosophy remains open, but the **prototype HUD should stay minimal**:
 
-- Poe counter
-- Installation counter
-- Optional placement failure feedback
+- Poe follower count or equivalent follower readability
+- Contextual `Press F` interaction prompt near the current Poe-powered object
+- Optional unmet-cost feedback (`Need 1 Poe`)
 
 Inventory, crafting interface, map/fog revelation UI, milestone notifications, and broader diegetic UI experiments are explicitly **out of scope for the first playable**. The prototype should prove legibility and feel with as little UI as possible.
 
@@ -556,14 +563,15 @@ Inventory, crafting interface, map/fog revelation UI, milestone notifications, a
 
 ### 15.2 Rendering & Fog Architecture
 
-The fog system is a hybrid of two layers:
+The current prototype fog system is built as a layered visual field:
 
-- **CanvasModulate + PointLight2D** — darkens all world content; player lantern and installation lights punch through natively via Godot's 2D light renderer. Zero per-frame cost for the live lantern.
-- **512×512 Image mask** — a `TextureRect` on a `CanvasLayer` above the world tracks permanent fog clearance state. Updated only during active clearance animations and idle boundary breathing. Serialised as PNG for save/load.
+- **CanvasModulate + PointLight2D** — darkens all world content; the player lantern punches through natively via Godot's 2D light renderer. This remains the core local-lighting layer.
+- **Dense fog cluster field** — many layered animated `Sprite2D` fog clusters are distributed across the world to create heavy mist coverage. Each cluster is composed of multiple soft fog sheets with subtle frame cycling, drift, and alpha overlap.
+- **Manager-driven lifecycle** — fog clusters are scene-local entities managed by a `FogManager`. They fade away when the player approaches, remain absent for a parameterized duration, and respawn as new fog after that delay.
 
-The fog boundary is implemented as a waterline — see §4.2. Boundary irregularity uses `FastNoiseLite` with a globally consistent seed.
+This architecture is deliberately visual-first. It currently does **not** define gameplay fog truth, permanent clearance, save/load fog state, or biome-gating behavior. Those remain open design/technical questions for later phases.
 
-Performance budget for simultaneous `PointLight2D` sources in a dense settlement to be validated during prototyping. The Image mask rebuild frequency is ~20fps for idle breathing, every frame during active clearance events.
+Performance budget for dense fog coverage is being validated empirically by increasing active cluster count and tuning animation/fade timing while maintaining acceptable frame rate on desktop.
 
 ### 15.3 Save System
 
@@ -593,8 +601,30 @@ The first playable prototype produced several concrete technical and design lear
 - **Readability requires stronger distinction between explored and unexplored space than the earliest prototype delivered.** Cleared territory needs an unmistakable settled look, while dense fog needs a more legible body and boundary so the player can read progress at a glance.
 - **The waterline metaphor remains useful, but implementation must stay scoped.** Receding fringe, settled edge tint, and soft boundary irregularity are high-value; full per-pixel breathing and expensive boundary scans are not justified in the first playable.
 - **Generated placeholder assets are a valid long-term prototyping workflow.** They reduced friction when building and testing scene structure, lighting, placement, and fog behavior before final art existed.
+- **Follower-based Poe interaction is more legible than abstract collection for the current prototype.** Keeping recruited Poes visible around the player teaches ownership, spend cost, and destination far more clearly than incrementing a hidden counter.
+- **Generic interactables should stay node-based and world-authored.** A reusable Poe-powered object node with simple range, cost, and activation hooks lets new mechanics be added in-scene without hardcoding one-off object logic into the player or Poe manager.
+- **Godot GDScript typing needs explicitness around dynamic scene calls.** When prototype systems rely on generic nodes, groups, or dynamically wired objects, local variables returned from those calls should be typed directly (`bool`, `float`, `String`, `Array`, `Node2D`) to avoid parser friction and hidden inference failures during iteration.
+- **Manager-owned coordination keeps prototype systems debuggable.** Letting `World` resolve the current interactable, `PoeParty` own recruited followers, and object nodes own only their local activation behavior produces clearer seams than pushing all logic into individual poes.
+- **Temporary fog feel and permanent fog clearing need separate rules but shared presentation.** The player and activated candles should both use the same local fade-and-part animation language, while only candle-driven clear zones suppress respawn permanently.
+- **Poe generation feels better when tied to movement through obscured space instead of static collection beats.** Accumulating progress while the player is actively walking through live fog creates a stronger sense that poes are being revealed or stirred out of the mist rather than merely picked up.
+- **Follower affordance should preview before interaction range.** Letting follower poes lean toward nearby valid objects from outside the strict activation radius teaches the mechanic with motion, while still keeping the actual spend/input gate tight.
+- **Small prop lights need to illuminate the ground, not just the prop sprite.** The candle light issue came from a light footprint that was too small and centered too high; readable secondary lights in this prototype need enough radius and a low enough center to affect nearby terrain through the fog.
+- **Higher player speed requires follower movement to become corrective rather than purely decorative.** Once movement becomes immediate and faster, follower hover needs distance-aware catch-up so the fairy read survives without the formation lagging behind the player.
 
 These learnings should be treated as current prototype-era guidance, not final production constraints. Future rendering or art passes may change implementation details, but they should preserve the separation between gameplay fog state and visual fog presentation.
+
+### 15.7 Latest Prototype Work
+
+The most recent prototype work has expanded from a pure fog-feel study into a narrower but more complete **player / lantern / fog / Poe interaction slice**.
+
+- The active scene remains intentionally pruned: player movement, lantern lighting, dense layered fog, ambient poes, and a small number of Poe-powered interactables.
+- Fog is represented as a high-density field of blended sprite clusters rather than a sparse decorative pass. The target feel is that the ground is meaningfully obscured until the player enters the mist.
+- Fog clusters support a visible proximity response: they fade away when the player reaches them, play a stylized horizontal parting motion during the fade, remain absent for a configurable duration, and then respawn as fresh mist. Activated candles now use the same fade language, but convert their area into a permanent non-respawning clear zone.
+- Poes no longer function as an invisible collected currency in the prototype. They are recruited as visible followers, capped to a small group, and orbit/hover around the player in a fairy-like pattern with stronger catch-up and state-change feedback.
+- Ambient poe presence is now sustained independently of followers, and additional poes can be spawned by sustained movement through active fog. This shifts the feel from static pickup collection toward a fog-traversal reward loop.
+- The first Poe-powered object example is a candle-like interactable. Candles can be previewed by nearby followers before activation, spent on with `F`, lit with flame/light feedback, and used to permanently hold open nearby fog.
+- Interaction targeting is world-resolved in two layers: a wider follower-preview range for affordance and a tighter activation range for the actual spend input.
+- The latest iteration work is now validating seven feel variables together: **fog density**, **fade timing**, **clarity of local dispersal**, **follower readability**, **Poe spend feedback**, **movement responsiveness**, and **secondary light readability**.
 
 ---
 
@@ -615,13 +645,13 @@ Goal: prove the game's core sensation.
 Includes:
 - Player movement in a dark top-down world
 - Handheld lantern using Godot 2D lighting for temporary visibility
-- FogSystem with permanent clearance mask and waterline-style boundary behavior
-- One installation type: lantern post
-- One Poe type with spawn, attraction, and collection behavior
+- Dense layered visual fog that obscures terrain and supports local proximity dispersal/respawn
+- One Poe type with spawn, attraction, follower recruitment, and spend-on-interaction behavior
+- One generic Poe-powered interactable pattern with a simple candle example
 - Generated placeholder PNG asset pipeline (`AssetGenerator` + `AssetConfig`)
-- Minimal HUD only
 
 Excludes:
+- Permanent fog-truth / save-state implementation
 - Crafting
 - Agriculture
 - Vendors and settlement simulation
@@ -633,8 +663,9 @@ Excludes:
 
 Done looks like:
 - A player can explore for 10 minutes without instruction and understand the loop
-- Placing a lantern post permanently changes the world in a satisfying, readable way
-- Poes are visible, collectible, and reinforce the loop
+- Moving through dense fog feels legible, atmospheric, and satisfying
+- Poes are visible, recruitable, and clearly readable as followers
+- Spending a Poe on a nearby object is obvious, responsive, and teaches the mechanic without heavy UI
 - The generated placeholder asset workflow supports rapid iteration without reworking scene logic
 
 **Phase 2 — Vertical slice**

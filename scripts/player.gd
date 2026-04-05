@@ -1,10 +1,9 @@
 extends CharacterBody2D
 
 signal lantern_position_changed(position: Vector2)
+signal player_position_changed(position: Vector2)
 
-@export var speed := 120.0
-@export var acceleration := 800.0
-@export var friction := 600.0
+@export var speed := 210.0
 @export var lantern_radius := 160.0
 @export var lantern_energy := 1.2
 @export var lantern_color := Color(1.0, 0.72, 0.25)
@@ -31,19 +30,19 @@ func _ready() -> void:
 	_apply_facing_visuals()
 	_setup_lantern_light()
 	lantern_position_changed.emit(get_lantern_world_position())
+	player_position_changed.emit(global_position)
 
 func _physics_process(delta: float) -> void:
 	_light_time += delta
-	var input_vector := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var input_vector: Vector2 = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if input_vector != Vector2.ZERO:
 		facing = input_vector.normalized()
-	velocity = velocity.move_toward(input_vector * speed, acceleration * delta)
-	if input_vector == Vector2.ZERO:
-		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+	velocity = input_vector * speed
 	move_and_slide()
 	_apply_facing_visuals()
 	_update_lantern_presentation(delta)
 	lantern_position_changed.emit(get_lantern_world_position())
+	player_position_changed.emit(global_position)
 
 func upgrade_lantern(radius: float, energy: float) -> void:
 	lantern_radius = radius

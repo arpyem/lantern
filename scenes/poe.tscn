@@ -18,3 +18,14 @@ hframes = 3
 [node name="GlowLight" type="PointLight2D" parent="."]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="StateBurst" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 12
+lifetime = 0.4
+one_shot = true
+
+[node name="TravelTrail" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 10
+lifetime = 0.28

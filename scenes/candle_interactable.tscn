@@ -1,0 +1,38 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/poe_interactable.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/candle_interactable.gd" id="2"]
+
+[node name="CandleInteractable" instance=ExtResource("1")]
+script = ExtResource("2")
+interaction_label = "light candle"
+inactive_asset_path = "interactables/candle_lit.png"
+active_asset_path = "interactables/candle_unlit.png"
+sprite_scale = 0.19
+light_offset = Vector2(1, -34)
+light_scale = 2.15
+inactive_light_energy = 0.0
+active_light_energy = 1.65
+interaction_radius = 92.0
+wick_offset = Vector2(1, -40)
+flame_scale = 0.34
+clears_fog = true
+fog_clear_radius = 170.0
+
+[node name="FlameSprite" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(1, -40)
+z_index = 3
+
+[node name="FlameParticles" type="GPUParticles2D" parent="."]
+position = Vector2(1, -40)
+emitting = false
+amount = 6
+lifetime = 0.65
+
+[node name="ActivationBurst" type="GPUParticles2D" parent="."]
+position = Vector2(1, -40)
+emitting = false
+amount = 18
+lifetime = 0.55
+one_shot = true

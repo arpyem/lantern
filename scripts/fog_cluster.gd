@@ -22,6 +22,7 @@ var _transition_timer: float = 0.0
 var _transition_progress: float = 0.0
 var _transition_direction: Vector2 = Vector2.ZERO
 var _pending_spawn_data: Dictionary = {}
+var _permanent_clear: bool = false
 
 var _base_blanket_position: Vector2
 var _base_blanket_scale: Vector2
@@ -115,6 +116,7 @@ func begin_respawn() -> void:
 		call_deferred("begin_respawn")
 		return
 	_state = FogState.RESPAWNING
+	_permanent_clear = false
 	_transition_timer = 0.0
 	_transition_progress = 0.0
 	_transition_direction = Vector2.ZERO
@@ -130,6 +132,7 @@ func _update_active_state() -> void:
 	if _representative_position().distance_to(_focus_position) > proximity_radius:
 		return
 	_state = FogState.FADING_OUT
+	_permanent_clear = false
 	_transition_timer = 0.0
 	_transition_progress = 0.0
 	_transition_direction = _push_direction()
@@ -137,16 +140,19 @@ func _update_active_state() -> void:
 func _update_fade_out(delta: float) -> void:
 	_transition_timer += delta
 	_transition_progress = clampf(_transition_timer / max(fade_out_duration, 0.001), 0.0, 1.0)
-	var eased := 1.0 - pow(1.0 - _transition_progress, 3.0)
+	var eased: float = 1.0 - pow(1.0 - _transition_progress, 3.0)
 	_apply_visuals(1.0 - eased, _transition_direction * eased)
 	if _transition_progress >= 1.0:
+		if _permanent_clear:
+			queue_free()
+			return
 		cleared.emit(_make_spawn_data())
 		queue_free()
 
 func _update_respawn(delta: float) -> void:
 	_transition_timer += delta
 	_transition_progress = clampf(_transition_timer / max(fade_in_duration, 0.001), 0.0, 1.0)
-	var eased := _transition_progress * _transition_progress * (3.0 - 2.0 * _transition_progress)
+	var eased: float = _transition_progress * _transition_progress * (3.0 - 2.0 * _transition_progress)
 	_apply_visuals(eased, _transition_direction * (1.0 - eased))
 	if _transition_progress >= 1.0:
 		_state = FogState.ACTIVE
@@ -157,22 +163,43 @@ func _update_respawn(delta: float) -> void:
 func _representative_position() -> Vector2:
 	return layer_blanket.global_position
 
+func get_representative_position() -> Vector2:
+	return _representative_position()
+
+func force_permanent_clear() -> void:
+	begin_permanent_clear(global_position)
+
+func begin_permanent_clear(from_position: Vector2) -> void:
+	if _state == FogState.FADING_OUT and _permanent_clear:
+		return
+	_state = FogState.FADING_OUT
+	_permanent_clear = true
+	_transition_timer = 0.0
+	_transition_progress = 0.0
+	_transition_direction = _push_direction_from(from_position)
+
+func is_active_fog() -> bool:
+	return _state == FogState.ACTIVE or _state == FogState.RESPAWNING
+
 func _push_direction() -> Vector2:
 	if _focus_position == Vector2.INF:
 		return Vector2.ZERO
-	var direction := _representative_position() - _focus_position
+	return _push_direction_from(_focus_position)
+
+func _push_direction_from(source_position: Vector2) -> Vector2:
+	var direction: Vector2 = _representative_position() - source_position
 	if direction.length_squared() <= 0.001:
 		return Vector2.RIGHT if randf() >= 0.5 else Vector2.LEFT
-	var horizontal_sign := signf(direction.x)
+	var horizontal_sign: float = signf(direction.x)
 	if is_zero_approx(horizontal_sign):
 		horizontal_sign = 1.0 if randf() >= 0.5 else -1.0
 	return Vector2(horizontal_sign, 0.0)
 
 func _apply_visuals(visibility_ratio: float, push_ratio: Vector2) -> void:
-	var blanket_push := push_ratio * max_push_distance
-	var layer_a_push := push_ratio * max_push_distance * 0.78
-	var layer_b_push := push_ratio * max_push_distance * 0.9
-	var layer_c_push := push_ratio * max_push_distance
+	var blanket_push: Vector2 = push_ratio * max_push_distance
+	var layer_a_push: Vector2 = push_ratio * max_push_distance * 0.78
+	var layer_b_push: Vector2 = push_ratio * max_push_distance * 0.9
+	var layer_c_push: Vector2 = push_ratio * max_push_distance
 
 	layer_blanket.position = _base_blanket_position + blanket_push
 	layer_a.position = layer_a_push
@@ -241,20 +268,20 @@ func _load_texture(relative_path: String, fallback_path: String) -> Texture2D:
 	return load(_asset_path(relative_path, fallback_path)) as Texture2D
 
 func _build_animation() -> void:
-	var animation := Animation.new()
+	var animation: Animation = Animation.new()
 	animation.length = 3.0
 	animation.loop_mode = Animation.LOOP_LINEAR
 	_add_frame_track(animation, "LayerBlanket:frame", [2, 3, 0, 1], 0.15)
 	_add_frame_track(animation, "LayerA:frame", [3, 0, 1, 2], 0.0)
 	_add_frame_track(animation, "LayerB:frame", [3, 0, 1, 2], 0.4)
 	_add_frame_track(animation, "LayerC:frame", [3, 0, 1, 2], 0.8)
-	var library := AnimationLibrary.new()
+	var library: AnimationLibrary = AnimationLibrary.new()
 	library.add_animation("breathe", animation)
 	animation_player.add_animation_library("", library)
 
 func _add_frame_track(animation: Animation, property_path: String, frames: Array[int], offset: float) -> void:
-	var track := animation.add_track(Animation.TYPE_VALUE)
+	var track: int = animation.add_track(Animation.TYPE_VALUE)
 	animation.track_set_path(track, NodePath(property_path))
 	for index in range(frames.size()):
-		var time := fposmod(float(index) + offset, animation.length)
+		var time: float = fposmod(float(index) + offset, animation.length)
 		animation.track_insert_key(track, time, frames[index])
